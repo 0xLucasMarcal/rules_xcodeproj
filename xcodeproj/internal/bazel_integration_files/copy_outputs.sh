@@ -21,6 +21,12 @@ readonly test_frameworks=(
 )
 
 if [[ "$ACTION" != indexbuild ]]; then
+  # Symlink .o files from BAZEL_PACKAGE_BIN_DIR to OBJECT_FILE_DIR_normal/arm64
+  find "$BAZEL_PACKAGE_BIN_DIR" -name '*.o' -exec sh -c '
+    ln -shfF "$PWD/$1" "$OBJECT_FILE_DIR_normal/arm64/$(basename "$1" | sed "s/\.swift//")"
+  ' _ {} \;
+
+
   # Copy product
   if [[ -n ${BAZEL_OUTPUTS_PRODUCT:-} ]]; then
     cd "${BAZEL_OUTPUTS_PRODUCT%/*}"
