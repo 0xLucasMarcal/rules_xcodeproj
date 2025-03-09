@@ -103,6 +103,10 @@ if [[ -n "${TOOLCHAINS-}" ]]; then
   fi
 fi
 
+if [[ -n "${TOOLCHAIN_DIR-}" ]]; then
+  toolchain="${TOOLCHAIN_DIR}"
+fi
+
 # Build
 
 echo "Starting Bazel build"
@@ -112,9 +116,9 @@ echo "Starting Bazel build"
   build \
   "${base_pre_config_flags[@]}" \
   ${build_pre_config_flags:+"${build_pre_config_flags[@]}"} \
+  ${toolchain:+--action_env=TOOLCHAINS="$toolchain"} \
   --config="$config" \
   --color=yes \
-  ${toolchain:+--action_env=TOOLCHAINS="$toolchain"} \
   "$output_groups_flag" \
   "%generator_label%" \
   ${labels:+"--build_metadata=PATTERN=${labels[*]}"} \

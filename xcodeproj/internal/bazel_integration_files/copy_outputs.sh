@@ -21,6 +21,12 @@ readonly test_frameworks=(
 )
 
 if [[ "$ACTION" != indexbuild ]]; then
+  # Symlink .o files from BAZEL_PACKAGE_BIN_DIR to OBJECT_FILE_DIR_normal/arm64
+  find "$BAZEL_PACKAGE_BIN_DIR" -name '*.o' -exec sh -c '
+    cp -f "$PWD/$1" "$OBJECT_FILE_DIR_normal/arm64/$(basename "$1" | sed "s/\.swift//")"
+  ' _ {} \;
+
+
   # Copy product
   if [[ -n ${BAZEL_OUTPUTS_PRODUCT:-} ]]; then
     cd "${BAZEL_OUTPUTS_PRODUCT%/*}"
@@ -28,7 +34,8 @@ if [[ "$ACTION" != indexbuild ]]; then
     if [[ -f "$BAZEL_OUTPUTS_PRODUCT_BASENAME" ]]; then
       # Product is a binary, so symlink instead of rsync, to allow for Bazel-set
       # rpaths to work
-      ln -sfh "$PWD/$BAZEL_OUTPUTS_PRODUCT_BASENAME" "$TARGET_BUILD_DIR/lib$PRODUCT_NAME.a"
+      echo "something"
+      # cp -f "$PWD/$BAZEL_OUTPUTS_PRODUCT_BASENAME" "$TARGET_BUILD_DIR/lib$PRODUCT_NAME.a"
     else
       # Product is a bundle
       rsync \

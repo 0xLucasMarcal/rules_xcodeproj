@@ -4,6 +4,9 @@ set -euo pipefail
 
 original_args=("$@")
 
+exec libtool "${original_args[@]}"
+exit 0
+
 while test $# -gt 0
 do
   case $1 in

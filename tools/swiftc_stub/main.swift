@@ -69,16 +69,18 @@ func processArgs(
         if let rawPathKey = previousArg {
             if let key = PathKey(rawValue: rawPathKey) {
                 paths[key] = URL(fileURLWithPath: arg)
+                previousArg = nil
+                return
             } else if let key = IncrementalCompilationPathKey(rawValue: rawPathKey) {
                 incrementalCompilationPaths[key, default: []].append(URL(fileURLWithPath: arg))
+                previousArg = nil
+                return
             }
-            previousArg = nil
-            return
         }
 
         if arg == "-wmo" || arg == "-whole-module-optimization" {
             isWMO = true
-        } else if arg.hasSuffix(".preview-thunk.swift") || arg.hasSuffix(".preview-thunk.swift.json") {
+        } else if arg.hasSuffix(".preview-thunk.swift") || arg.hasSuffix(".preview-thunk.swift.json") || arg.hasSuffix("__XCPREVIEW_THUNKSUFFIX__.preview-thunk.o") {
             isPreviewThunk = true
         } else if arg == "-emit-module" {
             // swift-driver doesn't pass `-output-file-map` when building swift modules without using OutputFileMap, we must handle this case
