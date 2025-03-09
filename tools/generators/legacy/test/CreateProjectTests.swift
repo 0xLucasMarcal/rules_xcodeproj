@@ -236,7 +236,7 @@ $(BUILD_DIR)/$(BAZEL_PACKAGE_BIN_DIR)
             "TAPI_EXEC": "/usr/bin/true",
             "SWIFT_OBJC_INTERFACE_HEADER_NAME": "",
             "SWIFT_OPTIMIZATION_LEVEL": "-Onone",
-            "SWIFT_USE_INTEGRATED_DRIVER": false,
+            "SWIFT_USE_INTEGRATED_DRIVER": true,
             "SWIFT_VERSION": "5.0",
             "TARGET_TEMP_DIR": """
 $(PROJECT_TEMP_DIR)/$(BAZEL_PACKAGE_BIN_DIR)/$(COMPILE_TARGET_NAME)
