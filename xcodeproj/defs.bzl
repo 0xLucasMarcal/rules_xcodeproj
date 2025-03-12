@@ -24,6 +24,7 @@ load(
 )
 load("//xcodeproj/internal:xcodeprojinfo.bzl", _XcodeProjInfo = "XcodeProjInfo")
 load("//xcodeproj/internal/xcschemes:xcschemes.bzl", _xcschemes = "xcschemes")
+load("//xcodeproj/internal:custom_toolchain.bzl", _custom_toolchain = "custom_toolchain")
 
 # Re-exporting providers
 XcodeProjAutomaticTargetProcessingInfo = _XcodeProjAutomaticTargetProcessingInfo
@@ -35,6 +36,7 @@ top_level_target = _top_level_target
 top_level_targets = _top_level_targets
 xcodeproj = _xcodeproj
 xcode_provisioning_profile = _xcode_provisioning_profile
+custom_toolchain = _custom_toolchain
 
 # Re-exporting APIs
 xcode_schemes = _xcode_schemes
