@@ -4,6 +4,7 @@ def _custom_toolchain_impl(ctx):
 
     default_toolchain_path = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain"
     user_toolchain_path = "$(eval echo ~)/Library/Developer/Toolchains/{}.xctoolchain".format(ctx.attr.toolchain_name)
+    built_toolchain_path = toolchain_dir.path
 
     # Generate symlink creation commands dynamically, excluding plist files
     symlink_script = """#!/bin/bash
@@ -12,26 +13,36 @@ set -e
 mkdir -p "{toolchain_dir}"
 
 find "{default_toolchain}" -type f -o -type l | while read file; do
+    base_name="$(basename "$file")"
     rel_path="${{file#"{default_toolchain}/"}}"
+    
+    override_path="$(echo {overrides} | jq -r --arg key "$base_name" '.[$key] // empty')"
+    if [[ -f "$override_path" ]]; then
+        mkdir -p "{toolchain_dir}/$(dirname "$rel_path")"
+        cp "$override_path" "{toolchain_dir}/$rel_path"
+        continue
+    fi
+    
     if [[ "$rel_path" != "ToolchainInfo.plist" ]]; then
         mkdir -p "{toolchain_dir}/$(dirname "$rel_path")"
         ln -s "$file" "{toolchain_dir}/$rel_path"
     fi
 done
 
-mkdir -p "{toolchain_dir}"
 mv "{toolchain_plist}" "{toolchain_dir}/ToolchainInfo.plist"
 
 # Remove existing symlink if present and create a new one in the user directory
 if [ -e "{user_toolchain_path}" ]; then
     rm -f "{user_toolchain_path}"
 fi
-ln -s "{toolchain_dir}" "{user_toolchain_path}"
+ln -s "{built_toolchain_path}" "{user_toolchain_path}"
 """.format(
         toolchain_dir=toolchain_dir.path,
         default_toolchain=default_toolchain_path,
+        overrides=ctx.attr.overrides,
         toolchain_plist=toolchain_plist_file.path,
-        user_toolchain_path=user_toolchain_path
+        user_toolchain_path=user_toolchain_path,
+        built_toolchain_path=built_toolchain_path
     )
 
     script_file = ctx.actions.declare_file(ctx.attr.toolchain_name + "_setup.sh")
@@ -80,5 +91,7 @@ custom_toolchain = rule(
     implementation=_custom_toolchain_impl,
     attrs={
         "toolchain_name": attr.string(mandatory=True),
+        "overrides": attr.string_dict(default={}),
     },
 )
+
