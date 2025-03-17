@@ -4,7 +4,7 @@ def _custom_toolchain_impl(ctx):
 
     default_toolchain_path = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain"
     user_toolchain_path = "$(eval echo ~)/Library/Developer/Toolchains/{}.xctoolchain".format(ctx.attr.toolchain_name)
-    built_toolchain_path = toolchain_dir.path
+    built_toolchain_path = "$(eval pwd)/"+toolchain_dir.path
 
     # Generate symlink creation commands dynamically, excluding plist files
     symlink_script = """#!/bin/bash
