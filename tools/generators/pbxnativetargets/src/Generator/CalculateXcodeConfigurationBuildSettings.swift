@@ -19,8 +19,8 @@ extension Generator {
             allConditionalFiles: Set<BazelPath>
         ) -> [BuildSetting] {
             return callable(
-                /*platformBuildSettings:*/ platformBuildSettings,
-                /*allConditionalFiles:*/ allConditionalFiles
+                /* platformBuildSettings: */ platformBuildSettings,
+                /* allConditionalFiles: */ allConditionalFiles
             )
         }
     }
@@ -71,7 +71,7 @@ extension Generator.CalculateXcodeConfigurationBuildSettings {
                             // Lots of code just to quote and `.pbxProjEscaped`
                             // the paths
                             platformBuildSettings.conditionalFiles
-                                .map { $0.path.quoteIfNeeded }
+                                .map(\.path.quoteIfNeeded)
                                 // TODO: See if we can not sort, or sort earlier
                                 .sorted()
                                 .joined(separator: " ")
@@ -101,7 +101,7 @@ extension Generator.CalculateXcodeConfigurationBuildSettings {
         excludedSourceFileNames.append(
             contentsOf: allConditionalFiles
                 .subtracting(conditionalFiles)
-                .map { $0.path.pbxProjEscaped }
+                .map(\.path.pbxProjEscaped)
         )
 
         // Set configuration-wide conditional files
@@ -130,9 +130,26 @@ extension Generator.CalculateXcodeConfigurationBuildSettings {
         }
 
         let allPlatforms = Set(platformBuildSettings.map(\.platform))
-        let basePlatform = platformBuildSettings.first!.platform
+        let defaultBasePlatform = platformBuildSettings.first!.platform
 
-        for (key, platformAndValues) in platformedBuildSettings {
+        for (key, unsortedPlatformAndValues) in platformedBuildSettings {
+            let platformAndValues: [(Platform, String)]
+            let basePlatform: Platform
+            if key == "SWIFT_COMPILATION_MODE" {
+                platformAndValues = unsortedPlatformAndValues
+                    .sorted { $0.0 < $1.0 }
+                    .reduce(into: []) { values, candidate in
+                        guard !values.contains(where: { $0 == candidate })
+                        else {
+                            return
+                        }
+                        values.append(candidate)
+                    }
+                basePlatform = platformAndValues.first!.0
+            } else {
+                platformAndValues = unsortedPlatformAndValues
+                basePlatform = defaultBasePlatform
+            }
             let isNonInheritableKey = nonInheritableKeys.contains(key)
 
             var remainingPlatforms: Set<Platform>

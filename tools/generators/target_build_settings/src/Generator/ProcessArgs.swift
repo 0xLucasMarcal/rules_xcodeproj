@@ -103,6 +103,8 @@ extension Generator.ProcessArgs {
         )
         let previewsFrameworkPaths =
             try rawArguments.consumeArg("previews-framework-paths")
+        let previewsResourceBundlePaths =
+            try rawArguments.consumeArg("previews-resource-bundle-paths")
         let previewsIncludePath =
             try rawArguments.consumeArg("previews-include-path")
         let separateIndexBuildOutputBase = try rawArguments.consumeArg(
@@ -124,6 +126,7 @@ extension Generator.ProcessArgs {
             buildSettings: &buildSettings,
             includeSelfSwiftDebugSettings: includeSelfSwiftDebugSettings,
             previewsFrameworkPaths: previewsFrameworkPaths,
+            previewsResourceBundlePaths: previewsResourceBundlePaths,
             previewsIncludePath: previewsIncludePath,
             separateIndexBuildOutputBase: separateIndexBuildOutputBase,
             transitiveSwiftDebugSettingPaths: transitiveSwiftDebugSettingPaths

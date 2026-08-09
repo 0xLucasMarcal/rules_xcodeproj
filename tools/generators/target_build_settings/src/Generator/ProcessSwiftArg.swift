@@ -23,15 +23,15 @@ extension Generator {
             swiftIncludes: inout OrderedSet<String>
         ) throws {
             try callable(
-                /*arg:*/ arg,
-                /*previousArg:*/ previousArg,
-                /*previousFrontendArg:*/ previousFrontendArg,
-                /*args:*/ &args,
-                /*buildSettings:*/ &buildSettings,
-                /*frameworkIncludes:*/ &frameworkIncludes,
-                /*includeSelfSwiftDebugSettings:*/
+                /* arg: */ arg,
+                /* previousArg: */ previousArg,
+                /* previousFrontendArg: */ previousFrontendArg,
+                /* args: */ &args,
+                /* buildSettings: */ &buildSettings,
+                /* frameworkIncludes: */ &frameworkIncludes,
+                /* includeSelfSwiftDebugSettings: */
                     includeSelfSwiftDebugSettings,
-                /*swiftIncludes:*/ &swiftIncludes
+                /* swiftIncludes: */ &swiftIncludes
             )
         }
     }
@@ -54,7 +54,7 @@ extension Generator.ProcessSwiftArg {
     static func defaultCallable(
         _ arg: String,
         previousArg: String?,
-        previousFrontendArg: String?,
+        previousFrontendArg _: String?,
         args: inout [String],
         buildSettings: inout [(key: String, value: String)],
         frameworkIncludes: inout OrderedSet<String>,

@@ -4,7 +4,7 @@ load(
 )
 load(
     "@build_bazel_rules_apple//apple:resources.bzl",
-    "apple_precompiled_resource_bundle",
+    "apple_resource_bundle",
 )
 load(
     "@build_bazel_rules_swift//mixed_language:mixed_language_library.bzl",
@@ -18,14 +18,18 @@ ios_build_test(
     visibility = ["@rules_xcodeproj//xcodeproj:generated"],
 )
 
-apple_precompiled_resource_bundle(
+apple_resource_bundle(
+    name = "MixedLibNestedResourceBundle",
+    bundle_name = "MixedLibNestedResources",
+    resources = ["NestedResources/value.txt"],
+)
+
+apple_resource_bundle(
     name = "MixedLibResourceBundle",
     bundle_name = "MixedLibResources",
-    resources = glob(
-        [
-            "Resources/**",
-        ],
-    ),
+    resources = glob(["Resources/**"]) + [
+        ":MixedLibNestedResourceBundle",
+    ],
 )
 
 mixed_language_library(

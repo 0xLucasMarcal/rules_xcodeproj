@@ -37,6 +37,7 @@ extension Generator {
             buildSettings: inout [(key: String, value: String)],
             includeSelfSwiftDebugSettings: Bool,
             previewsFrameworkPaths: String,
+            previewsResourceBundlePaths: String,
             previewsIncludePath: String,
             separateIndexBuildOutputBase: Bool,
             transitiveSwiftDebugSettingPaths: [URL]
@@ -52,6 +53,8 @@ extension Generator {
                 /*includeSelfSwiftDebugSettings:*/
                     includeSelfSwiftDebugSettings,
                 /*previewsFrameworkPaths:*/ previewsFrameworkPaths,
+                /*previewsResourceBundlePaths:*/
+                    previewsResourceBundlePaths,
                 /*previewsIncludePath:*/ previewsIncludePath,
                 /*transitiveSwiftDebugSettingPaths:*/
                     transitiveSwiftDebugSettingPaths,
@@ -74,6 +77,7 @@ extension Generator.ProcessSwiftArgs {
         _ buildSettings: inout [(key: String, value: String)],
         _ includeSelfSwiftDebugSettings: Bool,
         _ previewsFrameworkPaths: String,
+        _ previewsResourceBundlePaths: String,
         _ previewsIncludePath: String,
         _ transitiveSwiftDebugSettingPaths: [URL],
         _ parseTransitiveSwiftDebugSettings:
@@ -94,6 +98,7 @@ extension Generator.ProcessSwiftArgs {
         buildSettings: inout [(key: String, value: String)],
         includeSelfSwiftDebugSettings: Bool,
         previewsFrameworkPaths: String,
+        previewsResourceBundlePaths: String,
         previewsIncludePath: String,
         transitiveSwiftDebugSettingPaths: [URL],
         parseTransitiveSwiftDebugSettings:
@@ -120,6 +125,7 @@ extension Generator.ProcessSwiftArgs {
             buildSettings: &buildSettings,
             includeSelfSwiftDebugSettings: includeSelfSwiftDebugSettings,
             previewsFrameworkPaths: previewsFrameworkPaths,
+            previewsResourceBundlePaths: previewsResourceBundlePaths,
             previewsIncludePath: previewsIncludePath,
             transitiveSwiftDebugSettingPaths: transitiveSwiftDebugSettingPaths,
             parseTransitiveSwiftDebugSettings:
@@ -148,6 +154,7 @@ extension Generator.ProcessSwiftArgs {
         buildSettings: inout [(key: String, value: String)],
         includeSelfSwiftDebugSettings: Bool,
         previewsFrameworkPaths: String,
+        previewsResourceBundlePaths: String,
         previewsIncludePath: String,
         transitiveSwiftDebugSettingPaths: [URL],
         parseTransitiveSwiftDebugSettings:
@@ -207,6 +214,15 @@ extension Generator.ProcessSwiftArgs {
                 (
                     "PREVIEW_FRAMEWORK_PATHS",
                     previewsFrameworkPaths.pbxProjEscaped
+                )
+            )
+        }
+
+        if !previewsResourceBundlePaths.isEmpty {
+            buildSettings.append(
+                (
+                    "PREVIEW_RESOURCE_BUNDLE_PATHS",
+                    previewsResourceBundlePaths.pbxProjEscaped
                 )
             )
         }

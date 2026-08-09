@@ -207,7 +207,8 @@ extension Generator.CalculatePlatformVariantBuildSettings {
         }
 
         buildSettings.append(
-            contentsOf: platformVariant.buildSettingsFromFile.map { buildSetting in
+            contentsOf: platformVariant.buildSettingsFromFile.map {
+                buildSetting in
                 guard platformVariant.platform.supportsXcodePreviews,
                       buildSetting.key == "SWIFT_COMPILATION_MODE",
                       buildSetting.value == "wholemodule"

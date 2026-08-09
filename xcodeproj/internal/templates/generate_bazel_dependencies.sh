@@ -15,11 +15,11 @@ else
   if [[ "${ENABLE_PREVIEWS:-}" == "YES" ]]; then
     # Compile params, Preview frameworks, products (i.e. bundles) and index
     # store data, and link params
-    readonly output_group_prefixes="bc,bf,bp,bl"
+    readonly output_group_prefixes="bc,bf,bp,bl,br"
   elif [[ "${ENABLE_XOJIT_PREVIEWS:-}" == "YES" ]]; then
     # Shared XOJIT Previews compile the selected target with Xcode. Bazel only
-    # needs to materialize its runtime frameworks and link inputs.
-    readonly output_group_prefixes="bf,bl"
+    # needs to materialize its runtime frameworks, link inputs, and resources.
+    readonly output_group_prefixes="bf,bl,br"
   else
     # Products (i.e. bundles) and index store data
     readonly output_group_prefixes="bp"

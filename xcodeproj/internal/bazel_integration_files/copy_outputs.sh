@@ -104,6 +104,97 @@ stage_preview_frameworks() {
   done
 }
 
+stage_preview_resource_bundles() {
+  local destination_dir="$1"
+  local bundle_path
+  local parsed_bundle_paths
+  local bundle_index
+  local seen_bundle_index
+  local -a bundle_paths
+  local -a bundle_names=()
+
+  if ! parsed_bundle_paths="$(xargs -n1 <<< "$PREVIEW_RESOURCE_BUNDLE_PATHS")"; then
+    echo >&2 "error: Unable to parse Preview resource bundle paths"
+    return 1
+  fi
+  if [[ -z "$parsed_bundle_paths" ]]; then
+    echo >&2 "error: No Preview resource bundle paths were provided"
+    return 1
+  fi
+  IFS=$'\n' read -r -d '' -a bundle_paths < \
+    <(printf '%s\0' "$parsed_bundle_paths")
+
+  if [[ ( -e "$destination_dir" || -L "$destination_dir" ) && \
+        ! -d "$destination_dir" ]]; then
+    echo >&2 "error: Preview resource bundle destination is not a directory: $destination_dir"
+    return 1
+  fi
+
+  for bundle_path in "${bundle_paths[@]}"; do
+    local bundle_name="${bundle_path##*/}"
+    local destination="$destination_dir/$bundle_name"
+
+    if [[ "$bundle_name" != *.bundle ]]; then
+      echo >&2 "error: Preview resource bundle path does not name a .bundle: $bundle_path"
+      return 1
+    fi
+    if [[ ! -d "$bundle_path" ]]; then
+      echo >&2 "error: Preview resource bundle is not a materialized directory: $bundle_path"
+      return 1
+    fi
+    if [[ ! -f "$bundle_path/Info.plist" ]]; then
+      echo >&2 "error: Preview resource bundle is missing Info.plist: $bundle_path"
+      return 1
+    fi
+    if [[ -z "$(find "$bundle_path" -mindepth 1 ! -name Info.plist -print -quit)" ]]; then
+      echo >&2 "error: Preview resource bundle has no contents: $bundle_path"
+      return 1
+    fi
+
+    for (( seen_bundle_index=0; \
+           seen_bundle_index<${#bundle_names[@]}; \
+           seen_bundle_index++ )); do
+      if [[ "${bundle_names[seen_bundle_index]}" == "$bundle_name" ]]; then
+        echo >&2 "error: Multiple Preview resource bundles have the same basename: $bundle_name"
+        return 1
+      fi
+    done
+    bundle_names+=("$bundle_name")
+
+    if [[ ! -L "$destination" && -e "$destination" && ! -d "$destination" ]]; then
+      echo >&2 "error: Preview resource bundle destination is not a directory: $destination"
+      return 1
+    fi
+  done
+
+  mkdir -p "$destination_dir"
+  for (( bundle_index=0; \
+         bundle_index<${#bundle_paths[@]}; \
+         bundle_index++ )); do
+    local destination="$destination_dir/${bundle_names[bundle_index]}"
+    if [[ -L "$destination" ]]; then
+      unlink "$destination"
+    fi
+    "$rsync" \
+      --copy-links \
+      --recursive \
+      --times \
+      --delete \
+      --perms \
+      --chmod=u+w \
+      --out-format="%n%L" \
+      "${bundle_paths[bundle_index]}" \
+      "$destination_dir"
+
+    local destination="$destination_dir/${bundle_names[bundle_index]}"
+    if [[ ! -f "$destination/Info.plist" || \
+          -z "$(find "$destination" -mindepth 1 ! -name Info.plist -print -quit)" ]]; then
+      echo >&2 "error: Preview resource bundle was not copied completely: $destination"
+      return 1
+    fi
+  done
+}
+
 if [[ "$ACTION" != indexbuild ]]; then
   # Copy product
   if [[ -n ${BAZEL_OUTPUTS_PRODUCT:-} ]]; then
@@ -181,6 +272,16 @@ if [[ "$ACTION" != indexbuild ]]; then
       fi
     fi
   fi
+fi
+
+if [[ "$ACTION" != indexbuild && \
+      -n "${PREVIEW_RESOURCE_BUNDLE_PATHS:-}" && \
+      ( "${ENABLE_PREVIEWS:-}" == "YES" || \
+        "${ENABLE_XOJIT_PREVIEWS:-}" == "YES" ) ]]; then
+  # Generated resource accessors resolve their Preview override relative to
+  # the Bazel package directory, not the root of TARGET_BUILD_DIR.
+  stage_preview_resource_bundles \
+    "$TARGET_BUILD_DIR/${BAZEL_PACKAGE_BIN_DIR:-}"
 fi
 
 # TODO: https://github.com/MobileNativeFoundation/rules_xcodeproj/issues/402

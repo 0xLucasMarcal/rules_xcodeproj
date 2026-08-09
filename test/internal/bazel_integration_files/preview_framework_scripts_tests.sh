@@ -116,16 +116,23 @@ EOF
 run_generator_mode unset UNSET UNSET bp _dbg_build
 run_generator_mode ordinary NO NO bp _dbg_build
 run_generator_mode coverage NO NO bp dbg_coverage YES
-run_generator_mode legacy YES NO bc,bf,bp,bl dbg_swiftuipreviews
-run_generator_mode xojit NO YES bf,bl dbg_swiftuipreviews
-run_generator_mode xojit-coverage NO YES bf,bl dbg_swiftuipreviews YES
-run_generator_mode both YES YES bc,bf,bp,bl dbg_swiftuipreviews
+run_generator_mode legacy YES NO bc,bf,bp,bl,br dbg_swiftuipreviews
+run_generator_mode xojit NO YES bf,bl,br dbg_swiftuipreviews
+run_generator_mode xojit-coverage NO YES bf,bl,br dbg_swiftuipreviews YES
+run_generator_mode both YES YES bc,bf,bp,bl,br dbg_swiftuipreviews
 
 readonly fake_integration_dir="$test_root/copy-integration"
 mkdir -p "$fake_integration_dir"
 cat > "$fake_integration_dir/rsync" <<'EOF'
 #!/bin/bash
-exit 0
+set -euo pipefail
+[[ "${FAKE_RSYNC_COPY:-}" == YES ]] || exit 0
+args=("$@")
+readonly count="${#args[@]}"
+readonly source="${args[count - 2]}"
+readonly destination="${args[count - 1]}"
+mkdir -p "$destination"
+cp -R "$source" "$destination"
 EOF
 chmod +x "$fake_integration_dir/rsync"
 
@@ -163,6 +170,8 @@ run_binary_copy_mode() {
   local enable_previews="$2"
   local enable_xojit_previews="$3"
   local preview_framework_paths="$4"
+  local preview_resource_bundle_paths="${5:-}"
+  local fake_rsync_copy="${6:-NO}"
   local source_dir="$case_dir/product parent"
   local source="$source_dir/libStatic.a"
 
@@ -173,10 +182,13 @@ run_binary_copy_mode() {
     BAZEL_INTEGRATION_DIR="$fake_integration_dir" \
     BAZEL_OUTPUTS_PRODUCT="$source" \
     BAZEL_OUTPUTS_PRODUCT_BASENAME=libStatic.a \
+    BAZEL_PACKAGE_BIN_DIR=Reddit/Features/ProUpsell \
     ENABLE_PREVIEWS="$enable_previews" \
     ENABLE_XOJIT_PREVIEWS="$enable_xojit_previews" \
+    FAKE_RSYNC_COPY="$fake_rsync_copy" \
     FULL_PRODUCT_NAME=libStatic.a \
     PREVIEW_FRAMEWORK_PATHS="$preview_framework_paths" \
+    PREVIEW_RESOURCE_BUNDLE_PATHS="$preview_resource_bundle_paths" \
     PRODUCT_NAME=Static \
     TARGET_BUILD_DIR="$case_dir/build products" \
     WRAPPER_NAME=libStatic.a \
@@ -211,6 +223,21 @@ make_framework "$first_framework"
 make_framework "$second_framework"
 readonly preview_paths="\"$first_framework\" \"$second_framework\""
 
+readonly resource_root="$test_root/resource bundle sources"
+readonly resource_bundle="$resource_root/Mixed Resources.bundle"
+readonly transitive_resource_bundle="$resource_root/Palette_RedditPaletteAssetsBundle.bundle"
+mkdir -p \
+  "$resource_bundle/en.lproj" \
+  "$resource_bundle/Model.momd" \
+  "$transitive_resource_bundle/Colors"
+printf 'plist' > "$resource_bundle/Info.plist"
+printf 'localized-content' > "$resource_bundle/en.lproj/Localizable.strings"
+printf 'compiled-model-content' > "$resource_bundle/Model.momd/contents"
+printf 'plist' > "$transitive_resource_bundle/Info.plist"
+printf 'palette-content' > "$transitive_resource_bundle/Colors/Reddit.colors"
+readonly preview_resource_paths="\"$resource_bundle\" \"$transitive_resource_bundle\""
+readonly preview_resource_destination=Reddit/Features/ProUpsell
+
 readonly binary_ordinary_case="$test_root/copy-binary-ordinary"
 run_binary_copy_mode "$binary_ordinary_case" NO NO "$preview_paths"
 assert_link \
@@ -218,12 +245,40 @@ assert_link \
   "$binary_ordinary_case/product parent/libStatic.a"
 [[ ! -e "$binary_ordinary_case/build products/First Framework.framework" ]] || \
   fail "ordinary binary build staged a Preview framework"
+run_binary_copy_mode \
+  "$binary_ordinary_case" \
+  NO \
+  NO \
+  "$preview_paths" \
+  "$preview_resource_paths" \
+  YES
+[[ ! -e "$binary_ordinary_case/build products/Mixed Resources.bundle" ]] || \
+  fail "ordinary binary build staged a Preview resource bundle"
+[[ ! -e "$binary_ordinary_case/build products/$preview_resource_destination/Mixed Resources.bundle" ]] || \
+  fail "ordinary binary build staged a Preview resource bundle in its package directory"
+
 readonly binary_legacy_case="$test_root/copy-binary-legacy"
 run_binary_copy_mode "$binary_legacy_case" YES NO "$preview_paths"
 [[ ! -e "$binary_legacy_case/build products/First Framework.framework" ]] || \
   fail "legacy binary build staged a direct Preview framework"
 [[ ! -e "$binary_legacy_case/build products/libStatic.a/SwiftUIPreviewsFrameworks" ]] || \
   fail "legacy binary build staged a nested Preview framework"
+run_binary_copy_mode \
+  "$binary_legacy_case" \
+  YES \
+  NO \
+  "$preview_paths" \
+  "$preview_resource_paths" \
+  YES
+assert_equals \
+  localized-content \
+  "$(cat "$binary_legacy_case/build products/$preview_resource_destination/Mixed Resources.bundle/en.lproj/Localizable.strings")" \
+  "legacy Preview resource bundle localized content"
+assert_equals \
+  palette-content \
+  "$(cat "$binary_legacy_case/build products/$preview_resource_destination/Palette_RedditPaletteAssetsBundle.bundle/Colors/Reddit.colors")" \
+  "legacy transitive Preview resource bundle package-directory content"
+
 readonly binary_xojit_case="$test_root/copy-binary-xojit"
 run_binary_copy_mode "$binary_xojit_case" NO YES "$preview_paths"
 assert_link \
@@ -234,6 +289,22 @@ assert_link \
   "$second_framework"
 [[ -f "$binary_xojit_case/build products/First Framework.framework/Resources/value.txt" ]] || \
   fail "XOJIT binary framework symlink is incomplete"
+run_binary_copy_mode \
+  "$binary_xojit_case" \
+  NO \
+  YES \
+  "$preview_paths" \
+  "$preview_resource_paths" \
+  YES
+assert_equals \
+  compiled-model-content \
+  "$(cat "$binary_xojit_case/build products/$preview_resource_destination/Mixed Resources.bundle/Model.momd/contents")" \
+  "XOJIT Preview resource bundle compiled model content"
+assert_equals \
+  palette-content \
+  "$(cat "$binary_xojit_case/build products/$preview_resource_destination/Palette_RedditPaletteAssetsBundle.bundle/Colors/Reddit.colors")" \
+  "XOJIT transitive Preview resource bundle package-directory content"
+
 readonly ordinary_case="$test_root/copy-ordinary"
 run_copy_mode "$ordinary_case" NO NO "$preview_paths"
 [[ ! -e "$ordinary_case/build products/First Framework.framework" ]] || \

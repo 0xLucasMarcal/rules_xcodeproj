@@ -1,7 +1,6 @@
 import CustomDump
 import PBXProj
 import XCTest
-
 @testable import pbxnativetargets
 
 final class CalculateXcodeConfigurationBuildSettingsTests: XCTestCase {
@@ -45,9 +44,8 @@ final class CalculateXcodeConfigurationBuildSettingsTests: XCTestCase {
         ]
         let allConditionalFiles: Set<BazelPath> = []
 
-        // Order of conditionals is wrong, but this is to show that the function
-        // doesn't sort, and expects `platformVariantBuildSettings` to be
-        // pre-sorted
+        // Order of conditionals is wrong, but this verifies that ordering is
+        // preserved for build settings unrelated to Preview compatibility.
         let expectedBuildSettings: [String: String] = [
             "KEY1": "VALUE1",
             "KEY1[sdk=iphoneos*]".quoted: "VALUE1_Different",
@@ -78,6 +76,50 @@ final class CalculateXcodeConfigurationBuildSettingsTests: XCTestCase {
             buildSettings.asDictionary,
             expectedBuildSettings
         )
+    }
+
+    func test_simulatorCompilationModeIsBaseRegardlessOfInputOrder() {
+        let simulator = PlatformBuildSettings(
+            platform: .iOSSimulator,
+            conditionalFiles: [],
+            buildSettings: [
+                .init(
+                    key: "SWIFT_COMPILATION_MODE",
+                    value: "singlefile"
+                ),
+            ]
+        )
+        let device = PlatformBuildSettings(
+            platform: .iOSDevice,
+            conditionalFiles: [],
+            buildSettings: [
+                .init(
+                    key: "SWIFT_COMPILATION_MODE",
+                    value: "wholemodule"
+                ),
+            ]
+        )
+        let expectedBuildSettings = [
+            "SWIFT_COMPILATION_MODE": "singlefile",
+            "SWIFT_COMPILATION_MODE[sdk=iphoneos*]".quoted: "wholemodule",
+        ]
+
+        for platformBuildSettings in [
+            [simulator, device],
+            [device, simulator],
+            [device, simulator, device],
+        ] {
+            let buildSettings = Generator
+                .CalculateXcodeConfigurationBuildSettings.defaultCallable(
+                    platformBuildSettings: platformBuildSettings,
+                    allConditionalFiles: []
+                )
+
+            XCTAssertNoDifference(
+                buildSettings.asDictionary,
+                expectedBuildSettings
+            )
+        }
     }
 
     // FIXME: test_conditionalFiles

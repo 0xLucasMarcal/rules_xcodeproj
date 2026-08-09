@@ -65,6 +65,7 @@ swift_library(
     module_name = "target_build_settings_tests",
     deps = [
         ":target_build_settings.library",
+        "@com_github_apple_swift_collections//:OrderedCollections",
         "@com_github_pointfreeco_swift_custom_dump//:CustomDump",
     ],
 )
