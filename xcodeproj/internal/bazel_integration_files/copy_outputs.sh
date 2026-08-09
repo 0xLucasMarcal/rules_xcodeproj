@@ -278,10 +278,9 @@ if [[ "$ACTION" != indexbuild && \
       -n "${PREVIEW_RESOURCE_BUNDLE_PATHS:-}" && \
       ( "${ENABLE_PREVIEWS:-}" == "YES" || \
         "${ENABLE_XOJIT_PREVIEWS:-}" == "YES" ) ]]; then
-  # Generated resource accessors resolve their Preview override relative to
-  # the Bazel package directory, not the root of TARGET_BUILD_DIR.
-  stage_preview_resource_bundles \
-    "$TARGET_BUILD_DIR/${BAZEL_PACKAGE_BIN_DIR:-}"
+  # TARGET_BUILD_DIR is already package-scoped through CONFIGURATION_BUILD_DIR.
+  # Stage bundles as direct siblings so Preview resource accessors can find them.
+  stage_preview_resource_bundles "$TARGET_BUILD_DIR"
 fi
 
 # TODO: https://github.com/MobileNativeFoundation/rules_xcodeproj/issues/402

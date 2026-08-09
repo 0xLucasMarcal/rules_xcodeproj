@@ -174,8 +174,9 @@ run_binary_copy_mode() {
   local fake_rsync_copy="${6:-NO}"
   local source_dir="$case_dir/product parent"
   local source="$source_dir/libStatic.a"
+  local target_build_dir="$case_dir/build products/Reddit/Features/ProUpsell"
 
-  mkdir -p "$source_dir" "$case_dir/build products"
+  mkdir -p "$source_dir" "$target_build_dir"
   printf 'archive' > "$source"
   env \
     ACTION=build \
@@ -190,7 +191,7 @@ run_binary_copy_mode() {
     PREVIEW_FRAMEWORK_PATHS="$preview_framework_paths" \
     PREVIEW_RESOURCE_BUNDLE_PATHS="$preview_resource_bundle_paths" \
     PRODUCT_NAME=Static \
-    TARGET_BUILD_DIR="$case_dir/build products" \
+    TARGET_BUILD_DIR="$target_build_dir" \
     WRAPPER_NAME=libStatic.a \
     bash "$copy_outputs_script" _ ""
 }
@@ -239,11 +240,12 @@ readonly preview_resource_paths="\"$resource_bundle\" \"$transitive_resource_bun
 readonly preview_resource_destination=Reddit/Features/ProUpsell
 
 readonly binary_ordinary_case="$test_root/copy-binary-ordinary"
+readonly binary_ordinary_target_dir="$binary_ordinary_case/build products/$preview_resource_destination"
 run_binary_copy_mode "$binary_ordinary_case" NO NO "$preview_paths"
 assert_link \
-  "$binary_ordinary_case/build products/libStatic.a" \
+  "$binary_ordinary_target_dir/libStatic.a" \
   "$binary_ordinary_case/product parent/libStatic.a"
-[[ ! -e "$binary_ordinary_case/build products/First Framework.framework" ]] || \
+[[ ! -e "$binary_ordinary_target_dir/First Framework.framework" ]] || \
   fail "ordinary binary build staged a Preview framework"
 run_binary_copy_mode \
   "$binary_ordinary_case" \
@@ -252,16 +254,17 @@ run_binary_copy_mode \
   "$preview_paths" \
   "$preview_resource_paths" \
   YES
-[[ ! -e "$binary_ordinary_case/build products/Mixed Resources.bundle" ]] || \
+[[ ! -e "$binary_ordinary_target_dir/Mixed Resources.bundle" ]] || \
   fail "ordinary binary build staged a Preview resource bundle"
-[[ ! -e "$binary_ordinary_case/build products/$preview_resource_destination/Mixed Resources.bundle" ]] || \
-  fail "ordinary binary build staged a Preview resource bundle in its package directory"
+[[ ! -e "$binary_ordinary_target_dir/$preview_resource_destination/Mixed Resources.bundle" ]] || \
+  fail "ordinary binary build staged a Preview resource bundle in a duplicated package directory"
 
 readonly binary_legacy_case="$test_root/copy-binary-legacy"
+readonly binary_legacy_target_dir="$binary_legacy_case/build products/$preview_resource_destination"
 run_binary_copy_mode "$binary_legacy_case" YES NO "$preview_paths"
-[[ ! -e "$binary_legacy_case/build products/First Framework.framework" ]] || \
+[[ ! -e "$binary_legacy_target_dir/First Framework.framework" ]] || \
   fail "legacy binary build staged a direct Preview framework"
-[[ ! -e "$binary_legacy_case/build products/libStatic.a/SwiftUIPreviewsFrameworks" ]] || \
+[[ ! -e "$binary_legacy_target_dir/libStatic.a/SwiftUIPreviewsFrameworks" ]] || \
   fail "legacy binary build staged a nested Preview framework"
 run_binary_copy_mode \
   "$binary_legacy_case" \
@@ -272,22 +275,25 @@ run_binary_copy_mode \
   YES
 assert_equals \
   localized-content \
-  "$(cat "$binary_legacy_case/build products/$preview_resource_destination/Mixed Resources.bundle/en.lproj/Localizable.strings")" \
+  "$(cat "$binary_legacy_target_dir/Mixed Resources.bundle/en.lproj/Localizable.strings")" \
   "legacy Preview resource bundle localized content"
 assert_equals \
   palette-content \
-  "$(cat "$binary_legacy_case/build products/$preview_resource_destination/Palette_RedditPaletteAssetsBundle.bundle/Colors/Reddit.colors")" \
-  "legacy transitive Preview resource bundle package-directory content"
+  "$(cat "$binary_legacy_target_dir/Palette_RedditPaletteAssetsBundle.bundle/Colors/Reddit.colors")" \
+  "legacy transitive Preview resource bundle content"
+[[ ! -e "$binary_legacy_target_dir/$preview_resource_destination" ]] || \
+  fail "legacy Preview resource bundles were staged in a duplicated package directory"
 
 readonly binary_xojit_case="$test_root/copy-binary-xojit"
+readonly binary_xojit_target_dir="$binary_xojit_case/build products/$preview_resource_destination"
 run_binary_copy_mode "$binary_xojit_case" NO YES "$preview_paths"
 assert_link \
-  "$binary_xojit_case/build products/First Framework.framework" \
+  "$binary_xojit_target_dir/First Framework.framework" \
   "$first_framework"
 assert_link \
-  "$binary_xojit_case/build products/Second.framework" \
+  "$binary_xojit_target_dir/Second.framework" \
   "$second_framework"
-[[ -f "$binary_xojit_case/build products/First Framework.framework/Resources/value.txt" ]] || \
+[[ -f "$binary_xojit_target_dir/First Framework.framework/Resources/value.txt" ]] || \
   fail "XOJIT binary framework symlink is incomplete"
 run_binary_copy_mode \
   "$binary_xojit_case" \
@@ -298,12 +304,14 @@ run_binary_copy_mode \
   YES
 assert_equals \
   compiled-model-content \
-  "$(cat "$binary_xojit_case/build products/$preview_resource_destination/Mixed Resources.bundle/Model.momd/contents")" \
+  "$(cat "$binary_xojit_target_dir/Mixed Resources.bundle/Model.momd/contents")" \
   "XOJIT Preview resource bundle compiled model content"
 assert_equals \
   palette-content \
-  "$(cat "$binary_xojit_case/build products/$preview_resource_destination/Palette_RedditPaletteAssetsBundle.bundle/Colors/Reddit.colors")" \
-  "XOJIT transitive Preview resource bundle package-directory content"
+  "$(cat "$binary_xojit_target_dir/Palette_RedditPaletteAssetsBundle.bundle/Colors/Reddit.colors")" \
+  "XOJIT transitive Preview resource bundle content"
+[[ ! -e "$binary_xojit_target_dir/$preview_resource_destination" ]] || \
+  fail "XOJIT Preview resource bundles were staged in a duplicated package directory"
 
 readonly ordinary_case="$test_root/copy-ordinary"
 run_copy_mode "$ordinary_case" NO NO "$preview_paths"
